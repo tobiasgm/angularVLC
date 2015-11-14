@@ -30,6 +30,12 @@ angular.module('angularVLC', ['ui.router'])
                         }]
                    }
                 })
+                .state('about', {
+                    url: '/about',
+                    templateUrl: '/about.html',
+                    controller: 'aboutController',
+                    
+                })
                 .state('error', {
                     url: '/error',
                     templateUrl: '/error.html',
@@ -75,16 +81,17 @@ angular.module('angularVLC', ['ui.router'])
         
         p.poller = function() {
             $http.get(serverinfo.url+'requests/status.json').then(function(r) {
-                //angular.copy(r.data,p.data);
+                //console.log(r);
                 angular.copy(r,p.resp);
                 p.calls++;
-                $location.path('/main');
-                //console.log(p.calls);
+                if ($location.path() == '/error')
+                    $location.path('/main');
                 $timeout(p.poller, 500);
             }, function(r) {
-                console.log(r);
+                //console.log(r);
                 angular.copy(r,p.resp);
-                $location.path('/error');
+                if ($location.path() == '/main')
+                    $location.path('/error');
                 $timeout(p.poller, 5000);
             });
             
@@ -197,14 +204,17 @@ angular.module('angularVLC', ['ui.router'])
 
         // get playlist
         s.playlist = function() {
-            return $http.get(serverinfo.url+'requests/playlist.json').then (function(response) {angular.copy(response.data,s.pl) }, errorCallback);
+            return $http.get(serverinfo.url+'requests/playlist.json').then (function(response) {
+                angular.copy(response.data,s.pl);
+                console.log(s.pl)
+            }, errorCallback);
         };
         
         // browse dir
         s.browse = function(dir) {
             return $http.get(serverinfo.url+'requests/browse.json?dir='+dir).then (function(response) {
                 angular.copy(response.data,s.dir);
-                console.log(response.data)
+                console.log(s.dir)
             }, errorCallback);
         };
         
@@ -221,6 +231,26 @@ angular.module('angularVLC', ['ui.router'])
             $scope.dir = vlcControl.dir;
             $scope.pl = vlcControl.pl;
             $scope.resp = vlcPoller.resp;
+            $scope.predicate = 'name';
+            $scope.reverse = false;
+            $scope.search = 'flac';
+
+            $scope.order = function(predicate) {
+                $scope.reverse = ($scope.predicate === predicate) ? !$scope.reverse : false;
+                $scope.predicate = predicate;
+            };
+
+            $scope.filterFunction = function(element) {
+                if ($scope.isDir(element.type))
+                    return true;
+                else
+                    return element.name.match(/\.(mp3|flac)$/i) ? true : false;
+            };
+            
+            
+            $scope.ext = function(filename) {
+                return filename.split('.').pop();
+            }
             
             $scope.pl_add = function(uri) {
                 vlcControl.pl_add(uri);          
@@ -295,6 +325,16 @@ angular.module('angularVLC', ['ui.router'])
         function($scope, vlcControl, vlcPoller, $http, $interval) {
             $scope.data = vlcPoller.data;
             $scope.resp = vlcPoller.resp;
+        }])
+
+    .controller('aboutController',[
+        '$scope',
+        'vlcControl',
+        'vlcPoller',
+        '$http',
+        '$interval',
+        function($scope, vlcControl, vlcPoller, $http, $interval) {
+
         }])
             
 

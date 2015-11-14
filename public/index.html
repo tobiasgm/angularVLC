@@ -39,13 +39,13 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">angularVLC</a>
+          <a class="navbar-brand" href="#/main">angularVLC</a>
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li class="active"><a href="#">Home</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#contact">Contact</a></li>
+            <li class="active"><a href="#/main">Home</a></li>
+            <li><a href="#/about">About</a></li>
+            <li><a href="mailto:tobias.messenbrink@gmail.com">Contact</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -53,13 +53,20 @@
     
     <div class="container">
       <h1>angularVLC http remote control</h1>
-      <p class="lead">This is just a little test. Tryin to get angular to communicate with VLC http server.</p>
+
       <ui-view></ui-view>
     </div><!-- /.container -->
     
     <script type="text/ng-template"  id="/main.html">
+      <style type="text/css">
+       .sortorder:after {
+         content: '\25b2';
+       }
+       .sortorder.reverse:after {
+         content: '\25bc';
+       }
+      </style>
       <div>
-     
           <button ng-hide="isPlaying(resp.data.state)" class="ng-hide btn btn.default" ng-click="play()">Play</button>
           <button ng-show="isPlaying(resp.data.state)" class="ng-show btn btn.default" ng-click="pause()">Pause</button>
           <button class="btn btn.default" ng-click="stop()">Stop</button>
@@ -71,48 +78,61 @@
           <button ng-show="resp.data.random" class="ng-show btn btn-primary" ng-click="random()">Random</button>
         </div>
         <h3>Now Playing</h3>
-        <div>{{resp.data.state}}</div>
-        <p>{{resp.data.information.category.meta.artist}} - {{resp.data.information.category.meta.title}}</p>
+        <p>{{resp.data.state}}<br />
+          {{resp.data.information.category.meta.artist}} - {{resp.data.information.category.meta.title}}
+        </p>
         <div class="progress">
-          <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="{{resp.data.time}}" aria-valuemin="0" aria-valuemax="{{resp.data.length}}" ng-style="{width:(resp.data.time*100)/resp.data.length+'%'}">
+          <div ng-click="moveOnClick($event)" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="{{resp.data.time}}" aria-valuemin="0" aria-valuemax="{{resp.data.length}}" ng-style="{width:(resp.data.time*100)/resp.data.length+'%'}">
             <span class="sr-only">{{percent}} % Complete</span>
           </div>
         </div>
         <h3>Folders List</h3>
+        <pre>Sorting predicate = {{predicate}}; reverse = {{reverse}}</pre>
+        <span>[ path: {{dir.element[0].path}} ]</span>
+        <span>Sort by:<a href="" ng-click="order('name')">Name</a>
+          <span class="sortorder" ng-show="predicate === 'name'" ng-class="{reverse:reverse}"></span>  |
+          <a href="" ng-click="order('size')">Size</a>
+          <span class="sortorder" ng-show="predicate === 'size'" ng-class="{reverse:reverse}"></span> |
+          <a href="" ng-click="order('modification_time')">Modified</a>
+          <span class="sortorder" ng-show="predicate === 'modification_time'" ng-class="{reverse:reverse}"></span> |
+        </span>
+
         <ul>
-          <li ng-repeat="items in dir.element" ng-include="'tree_dir_renderer.html'"></li>
+          <li ng-repeat="item in dir.element | orderBy:predicate:reverse | filter:filterFunction" >
+            <button ng-hide="isFile(item.type)" class="ng-hide" ng-click="browse(item.path)">{{item.name}}</button>
+            <span ng-hide="isDir(item.type)" class="ng-hide">{{item.name}}</span>
+            <span ng-hide="isDir(item.type)" class="ng-hide">Size: {{item.size}}</span>
+            <button ng-hide="isDir(item.type)" class="ng-hide" ng-click="pl_add(item.uri)">add to playlist</button>
+          </li>
         </ul>
         <h3>Playlist</h3>
         <ul>
-          <li ng-repeat="node in pl.children" ng-include="'tree_item_renderer.html'"></li>
+          <li ng-repeat="item in pl.children" ng-include="'tree_item_renderer.html'"></li>
         </ul>
-        <footer>   <span>Server status: {{resp.status}}</span></footer>
+        <h3>Metadata</h3>
+        <span ng-repeat="(key,value) in resp.data.information.category.meta">{{key}} - {{value}}<br /></span>
+        <footer><span>Server status: {{resp.status}} - {{resp.statusText}}</span></footer>
     </script>
 
-    <!-- Render directory tree -->
-    <script type="text/ng-template"  id="tree_dir_renderer.html">
-      <button ng-hide="isFile(items.type)" class="ng-hide" ng-click="browse(items.path)">{{items.name}}</button>
-      <span ng-hide="isDir(items.type)" class="ng-hide">{{items.name}}</span>
-      <button ng-hide="isDir(items.type)" class="ng-hide" ng-click="pl_add(items.uri)">add to playlist</button>
-      <ul>
-        <li ng-repeat="items in items.children" ng-include="'tree_dir_renderer.html'"></li>
-      </ul>
-    </script>
-
-    <!-- Render Playlist tree -->
+    <!-- Recursively render Playlist tree -->
     <script type="text/ng-template"  id="tree_item_renderer.html">
-      <span ng-hide="node.duration" class="ng-hide">{{node.name}} - (id:{{node.id}})</span>
-      <button ng-show="node.duration" class="ng-show" ng-click="play(node.id)">{{node.name}} - (id:{{node.id}})</button>
-      <button ng-show="node.duration" class="ng-show" ng-click="pl_delete(node.id)">delete from playlist</button>
-
+      <span ng-hide="item.duration" class="ng-hide">{{item.name}} - (id:{{item.id}})</span>
+      <button ng-show="item.duration" class="ng-show" ng-click="play(item.id)">{{item.name}} - (id:{{item.id}})</button>
+      <button ng-show="item.duration" class="ng-show" ng-click="pl_delete(item.id)">delete from playlist</button>
       <ul>
-        <li ng-repeat="node in node.children" ng-include="'tree_item_renderer.html'"></li>
+        <li ng-repeat="item in item.children" ng-include="'tree_item_renderer.html'"></li>
       </ul>
+    </script>
+
+    <!-- About page -->
+    <script type="text/ng-template"  id="/about.html">
+      <p class="lead">This is just a little test. Tryin to get angular to communicate with VLC http server.</p>
+      <p> This script uses the http requests documented here: <a href="https://github.com/videolan/vlc/tree/master/share/lua/http/requests">https://github.com/videolan/vlc/tree/master/share/lua/http/requests</a></p>
     </script>
 
     <!-- Display error when connection is lost -->
     <script type="text/ng-template"  id="/error.html">
-      <span>{{resp.status}}</span>
+      <p class="lead">Error! Could not communicate with server. Error code: <span>{{resp.status}}</span></p>
     </script>
 
     <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>-->
