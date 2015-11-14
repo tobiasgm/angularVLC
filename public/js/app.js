@@ -3,7 +3,7 @@ angular.module('angularVLC', ['ui.router'])
     .constant('serverinfo', {
         url: 'http://localhost:8080/',
         authdata: ':test',
-        path: 'Users/tobias/Sites/angularVLC/public/media'
+        path: '/Users/tobias/music/'
     })
 
     // provide app routes and interceptor to inject http headers
@@ -29,6 +29,12 @@ angular.module('angularVLC', ['ui.router'])
                             return vlcControl.playlist();
                         }]
                    }
+                })
+                .state('error', {
+                    url: '/error',
+                    templateUrl: '/error.html',
+                    controller: 'errorController',
+                  
                 });
             
             // redirect unspecified routes    
@@ -63,16 +69,23 @@ angular.module('angularVLC', ['ui.router'])
     })
 
      // continuously poll for vlc status
-    .factory('vlcPoller', function($http, $timeout, serverinfo) {
+    .factory('vlcPoller', function($http, $timeout,$location, serverinfo, vlcControl) {
         
-        var p = { data: [], calls: 0 };
+        var p = { data:[], calls:0, resp:[] };
         
         p.poller = function() {
             $http.get(serverinfo.url+'requests/status.json').then(function(r) {
-                angular.copy(r.data,p.data);
+                //angular.copy(r.data,p.data);
+                angular.copy(r,p.resp);
                 p.calls++;
-                console.log(p.calls);
+                $location.path('/main');
+                //console.log(p.calls);
                 $timeout(p.poller, 500);
+            }, function(r) {
+                console.log(r);
+                angular.copy(r,p.resp);
+                $location.path('/error');
+                $timeout(p.poller, 5000);
             });
             
         };
@@ -189,7 +202,10 @@ angular.module('angularVLC', ['ui.router'])
         
         // browse dir
         s.browse = function(dir) {
-            return $http.get(serverinfo.url+'requests/browse.json?dir='+dir).then (function(response) {angular.copy(response.data,s.dir) }, errorCallback);
+            return $http.get(serverinfo.url+'requests/browse.json?dir='+dir).then (function(response) {
+                angular.copy(response.data,s.dir);
+                console.log(response.data)
+            }, errorCallback);
         };
         
         return s;
@@ -204,7 +220,7 @@ angular.module('angularVLC', ['ui.router'])
         function($scope, vlcControl, vlcPoller, $http, $interval) {
             $scope.dir = vlcControl.dir;
             $scope.pl = vlcControl.pl;
-            $scope.data = vlcPoller.data;
+            $scope.resp = vlcPoller.resp;
             
             $scope.pl_add = function(uri) {
                 vlcControl.pl_add(uri);          
@@ -255,8 +271,32 @@ angular.module('angularVLC', ['ui.router'])
                 if (type == 'dir') return true;
                 return false;
             };
+
+            $scope.isPlaying = function(state) {
+                if (state == undefined) return false;
+                if (state == 'playing') return true;
+                return false;
+            };
+
+            $scope.isPaused = function(type) {
+                if (state == undefined) return false;
+                if (state == 'paused') return true;
+                return false;
+            };
             
         }])
+
+    .controller('errorController',[
+        '$scope',
+        'vlcControl',
+        'vlcPoller',
+        '$http',
+        '$interval',
+        function($scope, vlcControl, vlcPoller, $http, $interval) {
+            $scope.data = vlcPoller.data;
+            $scope.resp = vlcPoller.resp;
+        }])
+            
 
     .factory('Base64', function () {
         /* jshint ignore:start */

@@ -30,7 +30,7 @@
 
   <body ng-app="angularVLC">
 
-    <nav class="navbar navbar-inverse navbar-fixed-top">
+    <nav class="navbar navbar-custom navbar-fixed-top">
       <div class="container">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -58,21 +58,24 @@
     </div><!-- /.container -->
     
     <script type="text/ng-template"  id="/main.html">
-        <div>
-          <button ng-click="play()">Play</button>
-          <button ng-click="pause()">Pause</button>
-          <button ng-click="stop()">Stop</button>
-          <button ng-click="prev()">Previous</button>
-          <button ng-click="next()">Next</button>
-          <button ng-click="loop()">Loop</button>
-          <button ng-click="random()">Random</button>
+      <div>
+     
+          <button ng-hide="isPlaying(resp.data.state)" class="ng-hide btn btn.default" ng-click="play()">Play</button>
+          <button ng-show="isPlaying(resp.data.state)" class="ng-show btn btn.default" ng-click="pause()">Pause</button>
+          <button class="btn btn.default" ng-click="stop()">Stop</button>
+          <button class="btn btn.default" ng-click="prev()">Previous</button>
+          <button class="btn btn.default" ng-click="next()">Next</button>
+          <button ng-hide="resp.data.loop" class="ng-hide btn btn.default" ng-click="loop()">Loop</button>
+          <button ng-show="resp.data.loop" class="ng-show btn btn-primary" ng-click="loop()">Loop</button>
+          <button ng-hide="resp.data.random" class="ng-hide btn btn.default" ng-click="random()">Random</button>
+          <button ng-show="resp.data.random" class="ng-show btn btn-primary" ng-click="random()">Random</button>
         </div>
         <h3>Now Playing</h3>
-        <div>{{data.state}}</div>
-        <p>{{data.information.category.meta.artist}} - {{data.information.category.meta.title}}</p>
+        <div>{{resp.data.state}}</div>
+        <p>{{resp.data.information.category.meta.artist}} - {{resp.data.information.category.meta.title}}</p>
         <div class="progress">
-          <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="{{data.time}}" aria-valuemin="0" aria-valuemax="{{data.length}}" ng-style="{width:(data.time*100)/data.length+'%'}">
-            <span class="sr-only">{{percent}}% Complete</span>
+          <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="{{resp.data.time}}" aria-valuemin="0" aria-valuemax="{{resp.data.length}}" ng-style="{width:(resp.data.time*100)/resp.data.length+'%'}">
+            <span class="sr-only">{{percent}} % Complete</span>
           </div>
         </div>
         <h3>Folders List</h3>
@@ -83,6 +86,7 @@
         <ul>
           <li ng-repeat="node in pl.children" ng-include="'tree_item_renderer.html'"></li>
         </ul>
+        <footer>   <span>Server status: {{resp.status}}</span></footer>
     </script>
 
     <!-- Render directory tree -->
@@ -106,7 +110,10 @@
       </ul>
     </script>
 
-
+    <!-- Display error when connection is lost -->
+    <script type="text/ng-template"  id="/error.html">
+      <span>{{resp.status}}</span>
+    </script>
 
     <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>-->
     <script src="bower_components/jquery/dist/jquery.js"></script>
